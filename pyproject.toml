@@ -9,6 +9,8 @@ license = "The Unlicense"
 python = "^3.7"
 python-telegram-bot = "^13.11"
 python-dotenv = "^0.19.2"
+requests = "^2.27.1"
+python-magic = "^0.4.25"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.12.2"
