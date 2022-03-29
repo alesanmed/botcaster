@@ -1,13 +1,19 @@
 import json
 import os
-import random
 from typing import Callable, List
 
 import magic
 import requests
-from GENDER import GENDER
-from LANGUAGES import LANGUAGES
 from requests import HTTPError
+
+from models.ivoox_episode import IvooxEpisode
+
+from .dto.audio_response_dto import AudioResponse
+from .dto.category_dto import Category
+from .dto.episode_response_dto import EpisodeResponse
+from .dto.image_response_dto import ImageResponse
+from .dto.program_dto import Program
+from .dto.tag_dto import Tag
 
 
 class IvooxConnector:
@@ -64,7 +70,7 @@ class IvooxConnector:
         self.token = response.json().get("data")
 
     @__handle_auth_error
-    def upload_audio(self, path: str):
+    def upload_audio(self, path: str) -> AudioResponse:
         """Uploads an audio file to ivoox
 
         Args:
@@ -104,10 +110,10 @@ class IvooxConnector:
 
         response.raise_for_status()
 
-        return response.json()
+        return AudioResponse(**response.json())
 
     @__handle_auth_error
-    def upload_image(self, path: str):
+    def upload_image(self, path: str) -> ImageResponse:
         """Uploads the episode image to IVOOX
 
         Args:
@@ -146,9 +152,9 @@ class IvooxConnector:
 
         response.raise_for_status()
 
-        return response.json()["data"][0]
+        return ImageResponse(**response.json()["data"][0])
 
-    def get_categories(self):
+    def get_categories(self) -> List[Category]:
         """
         Returns the list of categories
 
@@ -167,9 +173,11 @@ class IvooxConnector:
 
         response.raise_for_status()
 
-        return response.json()["data"]
+        raw_categories = response.json()["data"]
 
-    def get_tags(self, subcategory_id: int):
+        return list(map(lambda category: Category(**category), raw_categories))
+
+    def get_tags(self, subcategory_id: int) -> List[Tag]:
         """
         Returns the list of tags for the specified subcategory
 
@@ -191,10 +199,10 @@ class IvooxConnector:
 
         response.raise_for_status()
 
-        return response.json()["data"]["items"]
+        return list(map(lambda tag: Tag(**tag), response.json()["data"]["items"]))
 
     @__handle_auth_error
-    def get_programs(self):
+    def get_programs(self) -> List[Program]:
         """
         Returns the programs available for the logged user
 
@@ -204,28 +212,21 @@ class IvooxConnector:
         if self.token is None:
             self.__login()
 
-        response = requests.get(f"{self.BASE_API_URL}/private/programs")
+        response = requests.get(
+            f"{self.BASE_API_URL}/private/programs",
+            headers={
+                "Authorization": f"Bearer {self.token}",
+            },
+        )
 
         response.raise_for_status()
 
-        return response.json()["data"]["items"]
+        raw_programs = response.json()["data"]["items"]
+
+        return list(map(lambda program: Program(**program), raw_programs))
 
     @__handle_auth_error
-    def publish_episode(
-        self,
-        description: str,
-        gender: GENDER,
-        image_link: str,
-        program: int,
-        language: LANGUAGES,
-        subcategory: int,
-        tags: List[str],
-        title: str,
-        upload_reference: str,
-        upload_server: str,
-        upload_extension: str,
-        file_name: str,
-    ):
+    def publish_episode(self, program_dto: IvooxEpisode) -> EpisodeResponse:
         """
         Publishes the episode with the audio and images previously uploaded
 
@@ -258,15 +259,15 @@ class IvooxConnector:
             },
             data=json.dumps(
                 {
-                    "description": description,
-                    "genderId": gender.value,
-                    "image": image_link,
-                    "programId": program,
-                    "languageId": language.value,
-                    "subcategoryId": subcategory,
+                    "description": program_dto.description,
+                    "genderId": program_dto.gender_id,
+                    "image": program_dto.image,
+                    "programId": program_dto.program_id,
+                    "languageId": program_dto.language_id,
+                    "subcategoryId": program_dto.subcategory_id,
                     "mediaUrl": None,
-                    "tags": tags,
-                    "title": title,
+                    "tags": program_dto.tags,
+                    "title": program_dto.title,
                     "type": "PUBLIC",
                     "uploadDate": None,
                     "schedule": False,
@@ -275,12 +276,12 @@ class IvooxConnector:
                     "percentageOfListensCompleted": None,
                     "iTunesType": "full",
                     "scheduleDate": None,
-                    "uploadReference": upload_reference,
-                    "uploadServer": upload_server,
-                    "uploadExtension": upload_extension,
+                    "uploadReference": program_dto.upload_reference,
+                    "uploadServer": program_dto.upload_server,
+                    "uploadExtension": program_dto.upload_extension,
                     "listId": None,
                     "share": {},
-                    "fileName": file_name,
+                    "fileName": program_dto.file_name,
                     "fileUrl": None,
                 },
                 ensure_ascii=False,
@@ -289,7 +290,7 @@ class IvooxConnector:
 
         response.raise_for_status()
 
-        return response.json()["data"]
+        return EpisodeResponse(**response.json()["data"])
 
 
 if __name__ == "__main__":
@@ -297,39 +298,41 @@ if __name__ == "__main__":
         os.environ.get("IVOOX_USER", ""), os.environ.get("IVOOX_PASS", "")
     )
 
-    audio_data = connector.upload_audio(
-        "/mnt/d/Documents/Km 64/4 - Catacumbas/Catacumbas/Catacumbas_mezcla.mp3"
-    )
+    connector.get_programs()
 
-    image_data = connector.upload_image("/mnt/d/Downloads/food_up.jpg")
+    # audio_data = connector.upload_audio(
+    #     "/mnt/d/Documents/Km 64/4 - Catacumbas/Catacumbas/Catacumbas_mezcla.mp3"
+    # )
 
-    categories = connector.get_categories()
+    # image_data = connector.upload_image("/mnt/d/Downloads/food_up.jpg")
 
-    chosen_category = random.sample(categories, 1)
+    # categories = connector.get_categories()
 
-    chosen_subcategory = random.sample(chosen_category[0]["subcategories"], 1)[0]["id"]
+    # chosen_category = random.sample(categories, 1)
 
-    tags = connector.get_tags(chosen_subcategory)
+    # chosen_subcategory = random.sample(chosen_category[0]["subcategories"], 1)[0]["id"]
 
-    chosen_tags = random.sample(tags, 5)
+    # tags = connector.get_tags(chosen_subcategory)
 
-    uploaded_data = connector.publish_episode(
-        (
-            "Este episodio ha sido publicado con un metodo muy guay. "
-            "Que es básicamente subiendo un audio y una imagen a la "
-            "plataforma y dandole al boton de publicar."
-        ),
-        GENDER.PODCASTING,
-        image_data["url"],
-        1487989,
-        LANGUAGES.SPANISH,
-        chosen_subcategory,
-        list(map(lambda tag: tag["name"], chosen_tags)),
-        "Quizás la última prueba",
-        audio_data["ref"],
-        audio_data["server"],
-        audio_data["ext"],
-        audio_data["name"],
-    )
+    # chosen_tags = random.sample(tags, 5)
 
-    print(uploaded_data)
+    # uploaded_data = connector.publish_episode(
+    #     (
+    #         "Este episodio ha sido publicado con un metodo muy guay. "
+    #         "Que es básicamente subiendo un audio y una imagen a la "
+    #         "plataforma y dandole al boton de publicar."
+    #     ),
+    #     GENDER.PODCASTING,
+    #     image_data["url"],
+    #     1487989,
+    #     LANGUAGES.SPANISH,
+    #     chosen_subcategory,
+    #     list(map(lambda tag: tag["name"], chosen_tags)),
+    #     "Quizás la última prueba",
+    #     audio_data["ref"],
+    #     audio_data["server"],
+    #     audio_data["ext"],
+    #     audio_data["name"],
+    # )
+
+    # print(uploaded_data)

@@ -2,7 +2,7 @@
 
 from logging import getLogger
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackContext, CommandHandler, Dispatcher
 
 # Init logger
@@ -16,4 +16,9 @@ def init(dispatcher: Dispatcher):
 
 def start(update: Update, _: CallbackContext):
     """Process a /start command."""
-    update.message.reply_text(text="I'm a bot, please talk to me!")
+    update.message.reply_text(
+        text="Buenas! Soy el bot definitivo para los podcasters. ¿Qué quieres hacer?",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Nuevo episodio", callback_data="/new_episode")]]
+        ),
+    )

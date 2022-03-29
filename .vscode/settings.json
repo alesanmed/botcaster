@@ -34,7 +34,8 @@
       "./configurations",
       "./connectors",
       "./utils",
-      "./connectors/ivoox"
+      "./connectors/ivoox",
+      "./state_machine"
     ],
     "python.analysis.typeCheckingMode": "basic",
     "notebook.cellToolbarLocation": {

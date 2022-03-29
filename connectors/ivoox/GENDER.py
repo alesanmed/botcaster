@@ -6,9 +6,9 @@ class GENDER(IntEnum):
     Enum with all available genders
     """
 
+    PODCAST = 12
     RADIO = 5
-    AUDIOBOOK = 7
-    DOCUMENTARIES_TV = 9
-    PODCASTING = 12
-    CONFERENCES = 13
-    OTHER = 16
+    AUDILIBRO = 7
+    DOCUMENTAL_TV = 9
+    CONFERENCIAS = 13
+    OTRO = 16
